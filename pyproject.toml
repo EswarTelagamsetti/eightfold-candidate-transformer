@@ -1,0 +1,5 @@
+[project]
+name = "eightfold-candidate-transformer"
+version = "0.1.0"
+description = "A production-style multi-source candidate data transformer."
+requires-python = ">=3.13"
