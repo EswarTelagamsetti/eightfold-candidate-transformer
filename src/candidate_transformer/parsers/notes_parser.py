@@ -1,70 +1,86 @@
 """
-Parser for recruiter notes.
+Recruiter notes parser.
 
-Extracts candidate names, inferred skills, and raw recruiter notes
-from semi-structured text files.
+Parses semi-structured recruiter notes into NotesCandidate objects.
 """
 
 from pathlib import Path
+import re
 
 from candidate_transformer.models.source import NotesCandidate
 
-KNOWN_SKILLS = {
-    "python": "Python",
-    "fastapi": "FastAPI",
-    "aws": "AWS",
-    "nlp": "NLP",
-    "genai": "GenAI",
-    "sql": "SQL",
-    "machine learning": "Machine Learning",
-    "backend": "Backend Development",
-    "data engineering": "Data Engineering",
-}
+
+KNOWN_SKILLS = [
+    "python",
+    "fastapi",
+    "aws",
+    "genai",
+    "nlp",
+]
 
 
 def _extract_skills(text: str) -> list[str]:
-    """Extract known skills mentioned in free-text recruiter notes."""
-    text_lower = text.lower()
+    """Extract known skills from recruiter notes."""
+
+    text = text.lower()
+
     skills = []
 
-    for keyword, canonical_name in KNOWN_SKILLS.items():
-        if keyword in text_lower:
-            skills.append(canonical_name)
+    for skill in KNOWN_SKILLS:
+        if skill in text:
+            skills.append(skill)
 
     return skills
 
 
 def parse_notes(notes_path: Path) -> list[NotesCandidate]:
-    """Parse recruiter notes into NotesCandidate objects."""
+    """Parse recruiter notes."""
+
     text = notes_path.read_text(encoding="utf-8")
-    blocks = text.strip().split("------------------------------------")
+
+    sections = [
+        section.strip()
+        for section in re.split(r"-{5,}", text)
+        if section.strip()
+    ]
 
     candidates: list[NotesCandidate] = []
 
-    for block in blocks:
-        block = block.strip()
-
-        if not block:
-            continue
-
-        lines = [line.strip() for line in block.splitlines() if line.strip()]
+    for section in sections:
 
         name = None
+        email = None
+        phone = None
+
         note_lines = []
 
-        for line in lines:
+        for line in section.splitlines():
+
+            line = line.strip()
+
+            if not line:
+                continue
+
             if line.startswith("Candidate:"):
                 name = line.replace("Candidate:", "").strip()
+
+            elif line.startswith("Email:"):
+                email = line.replace("Email:", "").strip()
+
+            elif line.startswith("Phone:"):
+                phone = line.replace("Phone:", "").strip()
+
             else:
                 note_lines.append(line)
 
         notes = " ".join(note_lines)
-        skills = _extract_skills(notes)
 
         candidates.append(
             NotesCandidate(
                 name=name,
-                skills=skills,
+                email=email,
+                phone=phone,
+                skills=_extract_skills(notes),
                 notes=notes if notes else None,
             )
         )

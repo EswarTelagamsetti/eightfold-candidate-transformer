@@ -1,4 +1,6 @@
 Candidate: Aarav Mehta
+Email: aarav.mehta@techverse.ai
+Phone: +919876543210
 
 Strong Python and FastAPI skills.
 Worked extensively on AWS.
@@ -6,9 +8,11 @@ Expected CTC: 22 LPA.
 Notice period: Immediate.
 Communication: Excellent.
 
-------------------------------------
+--------------------------------
 
 Candidate: Priya Nair
+Email: priya.nair@insightlabs.io
+Phone: +919123456789
 
 Strong NLP background.
 Interested in GenAI.

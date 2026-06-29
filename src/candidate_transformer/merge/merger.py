@@ -48,6 +48,18 @@ def merge_candidates(
     notes_candidates: list[NotesCandidate],
 ) -> list[Candidate]:
     """Merge CSV and recruiter-note candidates by candidate name."""
+    notes_by_email = {
+        candidate.email.lower(): candidate
+        for candidate in notes_candidates
+        if candidate.email
+    }
+
+    notes_by_phone = {
+        normalize_phone(candidate.phone): candidate
+        for candidate in notes_candidates
+        if candidate.phone
+    }
+
     notes_by_name = {
         candidate.name.lower(): candidate
         for candidate in notes_candidates
@@ -59,8 +71,20 @@ def merge_candidates(
     for csv_candidate in csv_candidates:
         note_candidate = None
 
-        if csv_candidate.name:
-            note_candidate = notes_by_name.get(csv_candidate.name.lower())
+        if csv_candidate.email:
+            note_candidate = notes_by_email.get(
+                csv_candidate.email.lower()
+            )
+
+        if note_candidate is None and csv_candidate.phone:
+            note_candidate = notes_by_phone.get(
+                normalize_phone(csv_candidate.phone)
+            )
+
+        if note_candidate is None and csv_candidate.name:
+            note_candidate = notes_by_name.get(
+                csv_candidate.name.lower()
+            )
 
         provenance: list[ProvenanceEntry] = []
 

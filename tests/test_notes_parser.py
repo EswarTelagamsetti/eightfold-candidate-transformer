@@ -9,6 +9,8 @@ def test_parse_notes():
     assert len(candidates) == 2
 
     assert candidates[0].name == "Aarav Mehta"
+    assert candidates[0].email == "aarav.mehta@techverse.ai"
+    assert candidates[0].phone == "+919876543210"
 
-    assert "Python" in candidates[0].skills
-    assert "AWS" in candidates[0].skills
+    assert "python" in candidates[0].skills
+    assert "aws" in candidates[0].skills
