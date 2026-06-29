@@ -6,6 +6,7 @@ Runs the candidate transformation pipeline end-to-end.
 
 import argparse
 import json
+import logging
 from pathlib import Path
 
 from candidate_transformer.config.settings import load_config
@@ -16,6 +17,14 @@ from candidate_transformer.projection.projector import project_candidates
 from candidate_transformer.validation.validator import validate_candidates
 
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s: %(message)s",
+)
+
+logger = logging.getLogger(__name__)
+
+
 def run_pipeline(
     csv_path: Path,
     notes_path: Path,
@@ -23,14 +32,22 @@ def run_pipeline(
     output_path: Path,
 ) -> None:
     """Run the full candidate transformation pipeline."""
+    logger.info("Loading configuration from %s", config_path)
     config = load_config(config_path)
 
+    logger.info("Parsing CSV input from %s", csv_path)
     csv_candidates = parse_csv(csv_path)
+
+    logger.info("Parsing recruiter notes from %s", notes_path)
     notes_candidates = parse_notes(notes_path)
 
+    logger.info("Merging candidate records")
     candidates = merge_candidates(csv_candidates, notes_candidates)
+
+    logger.info("Validating merged candidates")
     validation_results = validate_candidates(candidates)
 
+    logger.info("Projecting candidates using runtime config")
     projected_output = project_candidates(candidates, config)
 
     final_output = {
@@ -38,12 +55,14 @@ def run_pipeline(
         "candidates": projected_output,
     }
 
+    logger.info("Writing output to %s", output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-
     output_path.write_text(
         json.dumps(final_output, indent=2),
         encoding="utf-8",
     )
+
+    logger.info("Pipeline completed successfully")
 
 
 def main() -> None:
