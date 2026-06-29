@@ -78,12 +78,25 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    run_pipeline(
-        csv_path=Path(args.csv),
-        notes_path=Path(args.notes),
-        config_path=Path(args.config),
-        output_path=Path(args.output),
-    )
+    try:
+        run_pipeline(
+            csv_path=Path(args.csv),
+            notes_path=Path(args.notes),
+            config_path=Path(args.config),
+            output_path=Path(args.output),
+        )
+
+    except FileNotFoundError as exc:
+        logger.error("File not found: %s", exc)
+        raise SystemExit(1)
+
+    except json.JSONDecodeError as exc:
+        logger.error("Invalid JSON configuration: %s", exc)
+        raise SystemExit(1)
+
+    except Exception as exc:
+        logger.exception("Unexpected error: %s", exc)
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
