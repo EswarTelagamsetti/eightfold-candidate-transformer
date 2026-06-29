@@ -10,54 +10,79 @@ from typing import Any
 from candidate_transformer.models.candidate import Candidate
 
 
-def _get_value_by_path(candidate: Candidate, path: str) -> Any:
-    """Read a value from Candidate using a simple config path."""
+def _to_plain_value(value: Any) -> Any:
+    """Convert Pydantic models into plain Python values."""
+    if hasattr(value, "model_dump"):
+        return value.model_dump()
 
-    if path == "full_name":
-        return candidate.full_name
+    if isinstance(value, list):
+        return [_to_plain_value(item) for item in value]
 
-    if path == "emails":
-        return candidate.emails
+    return value
 
-    if path == "emails[0]":
-        return candidate.emails[0] if candidate.emails else None
 
-    if path == "phones":
-        return candidate.phones
+def _get_attribute_value(obj: Any, attr: str) -> Any:
+    """Safely read an attribute from an object or dictionary."""
+    if isinstance(obj, dict):
+        return obj.get(attr)
 
-    if path == "phones[0]":
-        return candidate.phones[0] if candidate.phones else None
+    return getattr(obj, attr, None)
 
-    if path == "skills":
-        return [skill.model_dump() for skill in candidate.skills]
 
-    if path == "skills[].name":
-        return [skill.name for skill in candidate.skills]
+def _resolve_path(obj: Any, path: str) -> Any:
+    """
+    Resolve simple paths like:
+    - full_name
+    - emails[0]
+    - skills[].name
+    - experience[].company
+    """
+    current = obj
 
-    if path == "experience":
-        return [experience.model_dump() for experience in candidate.experience]
+    parts = path.split(".")
 
-    if path == "education":
-        return [education.model_dump() for education in candidate.education]
+    for part in parts:
+        if current is None:
+            return None
 
-    if path == "provenance":
-        return [entry.model_dump() for entry in candidate.provenance]
+        if part.endswith("[]"):
+            attr = part[:-2]
+            current = _get_attribute_value(current, attr)
 
-    if path == "overall_confidence":
-        return candidate.overall_confidence
+            if not isinstance(current, list):
+                return None
 
-    if path == "candidate_id":
-        return candidate.candidate_id
+            remaining_path = ".".join(parts[parts.index(part) + 1:])
 
-    if path == "headline":
-        return candidate.headline
+            if not remaining_path:
+                return _to_plain_value(current)
 
-    return None
+            return [
+                _resolve_path(item, remaining_path)
+                for item in current
+            ]
+
+        if "[" in part and part.endswith("]"):
+            attr, index_part = part[:-1].split("[")
+            index = int(index_part)
+
+            current = _get_attribute_value(current, attr)
+
+            if not isinstance(current, list):
+                return None
+
+            if index >= len(current):
+                return None
+
+            current = current[index]
+        else:
+            current = _get_attribute_value(current, part)
+
+    return _to_plain_value(current)
 
 
 def project_candidate(candidate: Candidate, config: dict[str, Any]) -> dict[str, Any]:
     """Project a Candidate into custom output shape using config."""
-
     output: dict[str, Any] = {}
     on_missing = config.get("on_missing", "null")
 
@@ -65,7 +90,7 @@ def project_candidate(candidate: Candidate, config: dict[str, Any]) -> dict[str,
         output_path = field_config["path"]
         source_path = field_config.get("from", output_path)
 
-        value = _get_value_by_path(candidate, source_path)
+        value = _resolve_path(candidate, source_path)
 
         if value is None:
             if field_config.get("required") and on_missing == "error":
@@ -94,5 +119,4 @@ def project_candidates(
     config: dict[str, Any],
 ) -> list[dict[str, Any]]:
     """Project multiple candidates."""
-
     return [project_candidate(candidate, config) for candidate in candidates]
