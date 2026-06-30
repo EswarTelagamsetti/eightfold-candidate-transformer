@@ -1,83 +1,105 @@
 # Eightfold Candidate Transformer
 
-A production-style candidate transformation pipeline that converts heterogeneous candidate information into a configurable canonical representation.
+A production-style candidate transformation pipeline that converts heterogeneous candidate information from multiple sources into a configurable canonical JSON representation.
 
-This project was built as part of the Eightfold Engineering Assignment.
+This project was developed as part of the **Eightfold Engineering Assignment**.
 
 ---
 
-## Features
+# Project Overview
+
+Recruitment data is often distributed across structured sources such as CSV files and unstructured recruiter notes. Managing this information manually can result in duplicate records, inconsistent formatting, and incomplete candidate profiles.
+
+The Candidate Transformer automatically integrates candidate information from multiple sources, intelligently merges candidate records, normalizes important fields, validates the generated profiles, and produces configurable JSON output suitable for downstream recruitment systems.
+
+---
+
+# Features
 
 - Parse candidate information from CSV files
 - Parse recruiter notes from free-text documents
-- Merge structured and unstructured data
+- Merge structured and unstructured candidate data
+- Generate canonical candidate profiles
 - Normalize phone numbers
 - Normalize skill names
-- Track provenance for every field
-- Compute confidence scores
-- Configurable JSON output projection
-- Validation engine
-- Command-line interface
-- Unit tested using pytest
+- Track provenance for every extracted field
+- Compute candidate confidence scores
+- Configuration-driven JSON projection
+- Candidate validation
+- Command Line Interface (CLI)
+- Unit tested using Pytest
 
 ---
 
-## Project Structure
+# Project Structure
 
 ```
-src/
-    candidate_transformer/
-        config/
-        merge/
-        models/
-        normalizers/
-        parsers/
-        projection/
-        validation/
-        main.py
-
-sample_data/
-
-outputs/
-
-tests/
-
-README.md
+eightfold-candidate-transformer/
+│
+├── src/
+│   └── candidate_transformer/
+│       ├── config/
+│       ├── merge/
+│       ├── models/
+│       ├── normalizers/
+│       ├── parsers/
+│       ├── projection/
+│       ├── validation/
+│       └── main.py
+│
+├── sample_data/
+├── outputs/
+├── tests/
+├── requirements.txt
+├── pyproject.toml
+└── README.md
 ```
 
 ---
 
-## Architecture
+# System Architecture
 
 ```text
-CSV File            Recruiter Notes
-   |                       |
-   v                       v
-CSV Parser            Notes Parser
-   |                       |
-   v                       v
-CsvCandidate       NotesCandidate
-        \             /
-         \           /
-          v         v
-          Merge Engine
-               |
-               v
-       Canonical Candidate
-               |
-               v
-          Validation
-               |
-               v
-          Projection
-               |
-               v
-          JSON Output
+                           INPUT SOURCES
+                   ┌──────────────────────────┐
+                   │                          │
+             candidates.csv          recruiter_notes.txt
+                   │                          │
+                   ▼                          ▼
+             CSV Parser                Notes Parser
+                   │                          │
+                   ▼                          ▼
+            CsvCandidate             NotesCandidate
+                   │                          │
+                   └────────────┬─────────────┘
+                                │
+                                ▼
+                     Candidate Matching
+                                │
+                                ▼
+                         Merge Engine
+                                │
+                                ▼
+                    Canonical Candidate
+                                │
+                                ▼
+                     Data Normalization
+                                │
+                                ▼
+                        Data Validation
+                                │
+                                ▼
+                  Configuration Projection
+                                │
+                                ▼
+                     Configurable JSON Output
+```
 
+---
 
-## Installation
+# Installation
 
-Clone repository
+Clone the repository
 
 ```bash
 git clone https://github.com/EswarTelagamsetti/eightfold-candidate-transformer.git
@@ -93,7 +115,7 @@ python -m venv .venv
 
 Activate
 
-Windows
+### Windows
 
 ```bash
 .venv\Scripts\activate
@@ -107,33 +129,45 @@ pip install -r requirements.txt
 
 ---
 
-## Usage
+# Usage
 
-Default projection
+Set Python path
 
-```bash
-python -m candidate_transformer.main ^
---csv sample_data/candidates.csv ^
---notes sample_data/recruiter_notes.txt ^
---config sample_data/default_config.json ^
+### Windows PowerShell
+
+```powershell
+$env:PYTHONPATH="src"
+```
+
+---
+
+## Generate Default Output
+
+```powershell
+python -m candidate_transformer.main `
+--csv sample_data/candidates.csv `
+--notes sample_data/recruiter_notes.txt `
+--config sample_data/default_config.json `
 --output outputs/default_output.json
 ```
 
-Custom projection
+---
 
-```bash
-python -m candidate_transformer.main ^
---csv sample_data/candidates.csv ^
---notes sample_data/recruiter_notes.txt ^
---config sample_data/custom_config.json ^
+## Generate Custom Output
+
+```powershell
+python -m candidate_transformer.main `
+--csv sample_data/candidates.csv `
+--notes sample_data/recruiter_notes.txt `
+--config sample_data/custom_config.json `
 --output outputs/custom_output.json
 ```
 
 ---
 
-## Configuration
+# Configuration
 
-Projection is completely configuration-driven.
+The projection engine is completely configuration-driven.
 
 Example
 
@@ -152,22 +186,24 @@ Example
 }
 ```
 
-No code changes are required when the output schema changes.
+Changing only the configuration file automatically changes the generated JSON output without modifying the application code.
 
 ---
 
-## Validation
+# Validation
 
-Current validation checks include
+Current validation rules include:
 
-- Missing email
-- Missing phone number
+- Email must be present
+- Phone number must be present
+
+Validation results are included in the generated output.
 
 ---
 
-## Normalization
+# Normalization
 
-Phone
+### Phone Number
 
 ```
 98765 43210
@@ -179,7 +215,7 @@ Phone
 +919876543210
 ```
 
-Skills
+### Skills
 
 ```
 python
@@ -189,6 +225,16 @@ python
 
 ```
 Python
+```
+
+```
+fastapi
+```
+
+↓
+
+```
+FastAPI
 ```
 
 ```
@@ -213,28 +259,48 @@ Generative AI
 
 ---
 
-## Provenance
+# Provenance Tracking
 
-Each output field stores
+Each important field stores:
 
-- source
-- field
-- extraction method
+- Source
+- Original Value
+- Extraction Method
 
 Example
 
 ```json
 {
-    "field":"skills",
-    "value":"Python",
-    "source":"recruiter_notes",
-    "method":"keyword_match"
+    "field": "skills",
+    "value": "Python",
+    "source": "recruiter_notes",
+    "method": "keyword_match"
+}
+```
+
+This provides complete traceability for every generated candidate profile.
+
+---
+
+# Example Output
+
+```json
+{
+  "full_name": "Aarav Mehta",
+  "primary_email": "aarav.mehta@techverse.ai",
+  "phone": "+919876543210",
+  "skills": [
+    "Python",
+    "FastAPI",
+    "AWS"
+  ],
+  "overall_confidence": 0.85
 }
 ```
 
 ---
 
-## Testing
+# Testing
 
 Run all tests
 
@@ -242,7 +308,7 @@ Run all tests
 pytest -v
 ```
 
-Current status
+Current Status
 
 ```
 9 tests passed
@@ -250,26 +316,33 @@ Current status
 
 ---
 
-## Technologies
+# Technologies Used
 
 - Python 3.13
 - Pydantic v2
 - Pytest
+- JSON
+- CSV
+- argparse
+- hashlib
 
 ---
 
-## Future Improvements
+# Future Improvements
 
 - Fuzzy candidate matching
-- Email-based merge strategy
-- LLM-assisted information extraction
-- Better confidence scoring
-- REST API
-- Docker support
-- CI/CD pipeline
+- Semantic candidate matching using embeddings
+- Resume PDF parsing
+- LLM-assisted recruiter note extraction
+- Improved confidence scoring
+- REST API deployment
+- Docker containerization
+- CI/CD using GitHub Actions
 
 ---
 
-## Author
+# Author
 
-Eswar Telagamsetti
+**Eswar Telagamsetti**
+
+Developed as part of the **Eightfold Engineering Assignment**.
